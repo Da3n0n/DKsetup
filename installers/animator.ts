@@ -72,7 +72,42 @@ export function getAnimationFrames(filePath: string): string[] {
             croppedFrames.push(croppedLines.join('\n'));
         }
 
-        return croppedFrames;
+        // User requested smaller size, re-adding downscaling to maximum 25x12
+        const MAX_WIDTH = 25;
+        const MAX_HEIGHT = 12;
+
+        const scaledFrames: string[] = [];
+        for (const frame of croppedFrames) {
+            const lines = frame.split('\n');
+            const height = lines.length;
+            const width = Math.max(...lines.map(l => l.length));
+
+            if (height > MAX_HEIGHT || width > MAX_WIDTH) {
+                const scaleY = height / MAX_HEIGHT;
+                const scaleX = width / MAX_WIDTH;
+                const scale = Math.max(scaleX, scaleY);
+
+                const newHeight = Math.floor(height / scale);
+                const newWidth = Math.floor(width / scale);
+
+                const scaledLines = [];
+                for (let y = 0; y < newHeight; y++) {
+                    let newLine = '';
+                    for (let x = 0; x < newWidth; x++) {
+                        const origY = Math.floor(y * scale);
+                        const origX = Math.floor(x * scale);
+                        const origChar = lines[origY]?.[origX] || ' ';
+                        newLine += origChar;
+                    }
+                    scaledLines.push(newLine);
+                }
+                scaledFrames.push(scaledLines.join('\n'));
+            } else {
+                scaledFrames.push(frame);
+            }
+        }
+
+        return scaledFrames;
     } catch (e) {
         console.error("Animator error:", e);
         return [];

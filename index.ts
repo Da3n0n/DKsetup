@@ -56,15 +56,43 @@ const categories = {
 };
 
 async function runDashboard() {
-    console.clear();
-    console.log(chalk.bold.hex('#00e5ff')(`
-██████╗ ██╗  ██╗    ██████╗██╗     ██╗
-██╔══██╗██║ ██╔╝   ██╔════╝██║     ██║
-██║  ██║█████╔╝    ██║     ██║     ██║
-██║  ██║██╔═██╗    ██║     ██║     ██║
-██████╔╝██║  ██╗██╗╚██████╗███████╗██║
-╚═════╝ ╚═╝  ╚═╝╚═╝ ╚═════╝╚══════╝╚═╝
-    `));
+    const bannerText = [
+        "██████╗ ██╗  ██╗    ██████╗██╗     ██╗",
+        "██╔══██╗██║ ██╔╝   ██╔════╝██║     ██║",
+        "██║  ██║█████╔╝    ██║     ██║     ██║",
+        "██║  ██║██╔═██╗    ██║     ██║     ██║",
+        "██████╔╝██║  ██╗██╗╚██████╗███████╗██║",
+        "╚═════╝ ╚═╝  ╚═╝╚═╝ ╚═════╝╚══════╝╚═╝"
+    ];
+
+    const { getAnimationFrames } = await import('./installers/animator.js');
+    const introFrames = getAnimationFrames('ASCII Animations/ring aniamtion.html');
+    const gradient = (await import('gradient-string')).default;
+
+    if (introFrames.length > 0) {
+        console.clear();
+        for (let i = 0; i < 40; i++) {
+            const frameIdx = i % introFrames.length;
+            const frameLines = introFrames[frameIdx].split('\n');
+            const height = Math.max(bannerText.length, frameLines.length);
+            const combinedLines = [];
+            for (let line = 0; line < height; line++) {
+                const bLine = bannerText[line] || '';
+                const fLine = frameLines[line] || '';
+                combinedLines.push(bLine.padEnd(42, ' ') + fLine);
+            }
+            process.stdout.write('\x1b[0;0H');
+            console.log(gradient.rainbow(combinedLines.join('\n')));
+            await new Promise(r => setTimeout(r, 60));
+        }
+    } else {
+        const chalkAnimation = (await import('chalk-animation')).default;
+        console.clear();
+        const banner = chalkAnimation.rainbow(bannerText.join('\n'));
+        await new Promise(r => setTimeout(r, 2000));
+        banner.stop();
+    }
+
     console.log(chalk.gray('The ultimate cross-platform dev environment bootstrap.\n'));
 
     // OS Overview
@@ -132,7 +160,21 @@ async function runDashboard() {
         }
 
         // Step 3: Execution Engine
-        console.log(chalk.bold.blue('\n🚀 Commencing Setup...\n'));
+        const chalkAnimation = (await import('chalk-animation')).default;
+        const transition = chalkAnimation.glitch('\n[ PREPARING SELECTED MODULES ]\n');
+        await new Promise(r => setTimeout(r, 1500));
+        transition.stop();
+
+        console.log(chalk.bold.blue('🚀 Commencing Setup...\n'));
+
+        const { getAnimationFrames } = await import('./installers/animator.js');
+        const frames = getAnimationFrames('ASCII Animations/ring aniamtion.html');
+        // Fallback to standard line spinner if frames fail to load
+        const fallbackSpinner = ['-', '\\', '|', '/'];
+        const spinnerFrames = frames.length > 0 ? frames : fallbackSpinner;
+
+        const ora = (await import('ora')).default;
+
         for (const installer of finalInstallers) {
             console.log(chalk.bold(`➜ ${installer.name}`) + chalk.gray(` - ${installer.description}`));
 
@@ -142,7 +184,20 @@ async function runDashboard() {
                 continue;
             }
 
-            await installer.install();
+            const spinner = ora({
+                text: `Installing ${installer.name}...`,
+                spinner: {
+                    interval: frames.length > 0 ? 30 : 80,
+                    frames: spinnerFrames
+                }
+            }).start();
+
+            try {
+                await installer.install();
+                spinner.succeed(chalk.green(`Installed ${installer.name} successfully!`));
+            } catch (error) {
+                spinner.fail(chalk.red(`Failed to install ${installer.name}.`));
+            }
             console.log(); // Spacing
         }
 
