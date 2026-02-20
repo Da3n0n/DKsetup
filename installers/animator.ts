@@ -1,0 +1,80 @@
+import fs from 'fs';
+import path from 'path';
+
+/**
+ * Extracts animation frames from the provided HTML/JS file dynamically.
+ * @param filePath Path to the animation file
+ * @returns Array of string frames
+ */
+export function getAnimationFrames(filePath: string): string[] {
+    try {
+        const fullPath = path.resolve(filePath);
+        if (!fs.existsSync(fullPath)) {
+            return [];
+        }
+
+        const content = fs.readFileSync(fullPath, 'utf8');
+        const frames: string[] = [];
+
+        // Simple string splitting to avoid regex ReDoS
+        const parts = content.split('n[');
+        for (let i = 1; i < parts.length; i++) {
+            const p = parts[i];
+            const startStr = "] = '";
+            const startIdx = p.indexOf(startStr);
+            if (startIdx > -1) {
+                const body = p.substring(startIdx + startStr.length);
+                const endIdx = body.indexOf("';");
+
+                if (endIdx > -1) {
+                    // Extract the string and replace literal \\n with actual newlines
+                    let frame = body.substring(0, endIdx);
+                    frame = frame.replace(/\\n/g, '\n');
+                    // Add some spacing or trim if necessary, but keep original for now
+                    frames.push(frame);
+                }
+            }
+        }
+
+        // Second pass: Crop the frames to the minimum bounding box
+        let minLeadingSpaces = Infinity;
+        let minTrailingSpaces = Infinity;
+        let firstNonEmptyLine = Infinity;
+        let lastNonEmptyLine = -1;
+
+        const parsedFrames = frames.map(f => f.split('\n'));
+        const frameHeight = parsedFrames[0]?.length || 0;
+
+        for (const lines of parsedFrames) {
+            for (let r = 0; r < lines.length; r++) {
+                const line = lines[r];
+                if (line.trim().length === 0) continue;
+
+                firstNonEmptyLine = Math.min(firstNonEmptyLine, r);
+                lastNonEmptyLine = Math.max(lastNonEmptyLine, r);
+
+                const leading = line.match(/^ */)?.[0].length || 0;
+                const trailing = line.match(/ *$/)?.[0].length || 0;
+
+                minLeadingSpaces = Math.min(minLeadingSpaces, leading);
+                minTrailingSpaces = Math.min(minTrailingSpaces, trailing);
+            }
+        }
+
+        const croppedFrames: string[] = [];
+        for (const lines of parsedFrames) {
+            const croppedLines = [];
+            for (let r = firstNonEmptyLine; r <= lastNonEmptyLine; r++) {
+                const line = lines[r] || '';
+                // Remove the minimum leading spaces, and trim the end
+                croppedLines.push(line.substring(Math.min(minLeadingSpaces, line.length)).trimEnd());
+            }
+            croppedFrames.push(croppedLines.join('\n'));
+        }
+
+        return croppedFrames;
+    } catch (e) {
+        console.error("Animator error:", e);
+        return [];
+    }
+}
