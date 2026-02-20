@@ -1,6 +1,6 @@
 {
   "name": "dksetup",
-  "version": "1.0.35",
+  "version": "1.0.43",
   "description": "A CLI toolkit for DK-CLI.",
   "main": "index.js",
   "bin": {

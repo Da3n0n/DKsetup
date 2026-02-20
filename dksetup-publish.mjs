@@ -89,6 +89,9 @@ async function assertNpmAuth(cwd) {
 
 async function main() {
   const repoRoot = process.cwd();
+
+  // (lockfile removed) — script now checks registry and publishes existing local
+  // versions before bumping, so an external lock is unnecessary.
   const packageStates = [];
   for (const config of packageConfigs) {
     const fullPath = resolve(repoRoot, config.path);
@@ -99,7 +102,7 @@ async function main() {
     packageStates.push({
       ...config,
       fullPath,
-      pkgJson,s
+      pkgJson,
       oldVersion: pkgJson.version,
       newVersion: bumpPatch(pkgJson.version)
     });
@@ -111,6 +114,8 @@ async function main() {
       publishedCount += 1;
     }
   }
+
+  // If resumeOnly handling already exists, keep that behavior
   if (resumeOnly && publishedCount > 0 && publishedCount < packageStates.length) {
     if (!dryRun) {
       const npmUser = await assertNpmAuth(repoRoot);
@@ -169,6 +174,37 @@ async function main() {
     console.log('\nResume mode did not publish anything.');
     return;
   }
+
+  // SAFETY: if some local versions are NOT yet published, publish them first
+  // instead of bumping again. This prevents repeated runs from repeatedly
+  // incrementing the package version while the registry is still processing.
+  if (publishedCount < packageStates.length) {
+    if (dryRun) {
+      console.log('\nDry run: would publish existing local versions (no bump):');
+      for (const pkg of packageStates) {
+        if (!pkg.currentPublished) console.log(`- ${pkg.name}@${pkg.oldVersion}`);
+      }
+      return;
+    }
+
+    const npmUser = await assertNpmAuth(repoRoot);
+    console.log(`\nAuthenticated as npm user: ${npmUser}`);
+    console.log('\nPublishing current local versions (no bump) to avoid duplicate increments...');
+
+    for (const pkg of packageStates) {
+      if (!pkg.currentPublished) {
+        const publishCwd = resolve(repoRoot, pkg.publishDir);
+        console.log(`\nPublishing ${pkg.name}@${pkg.oldVersion} from ${pkg.publishDir}`);
+        await runCommand('npm', ['publish', '--access', 'public'], publishCwd);
+        console.log(`Published ${pkg.name}@${pkg.oldVersion}`);
+      } else {
+        console.log(`Skipping ${pkg.name}@${pkg.oldVersion} (already published).`);
+      }
+    }
+
+    console.log('\nCompleted publishing existing local versions. No bump performed.');
+    return;
+  }
   if (dryRun) {
     console.log('\nPlanned version updates:');
     for (const pkg of packageStates) {
@@ -179,21 +215,30 @@ async function main() {
   }
   const npmUser = await assertNpmAuth(repoRoot);
   console.log(`\nAuthenticated as npm user: ${npmUser}`);
-  for (const pkg of packageStates) {
-    pkg.pkgJson.version = pkg.newVersion;
-    await savePackageJson(pkg.fullPath, pkg.pkgJson);
+  try {
+    for (const pkg of packageStates) {
+      pkg.pkgJson.version = pkg.newVersion;
+      await savePackageJson(pkg.fullPath, pkg.pkgJson);
+      console.log(`Bumped ${pkg.name} from ${pkg.oldVersion} to ${pkg.newVersion}`);
+      const publishCwd = resolve(repoRoot, pkg.publishDir);
+      console.log(`Publishing ${pkg.name}@${pkg.newVersion} from ${pkg.publishDir}...`);
+      await runCommand('npm', ['publish', '--access', 'public'], publishCwd);
+
+      // verify registry has the new version
+      const maxAttempts = 10;
+      let ok = false;
+      for (let i = 0; i < maxAttempts; ++i) {
+        const published = await isPublished(pkg.name, pkg.newVersion, repoRoot);
+        if (published) { ok = true; break; }
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+      if (!ok) {
+        throw new Error(`Published ${pkg.name}@${pkg.newVersion} but registry did not report it within timeout.`);
+      }
+
+      console.log(`Published ${pkg.name}@${pkg.newVersion} successfully.`);
+    }
   }
-  console.log('\nVersion updates:');
-  for (const pkg of packageStates) {
-    console.log(`- ${pkg.name}: ${pkg.oldVersion} -> ${pkg.newVersion}`);
-  }
-  console.log('\nPublishing packages to npm...');
-  for (const pkg of packageStates) {
-    const publishCwd = resolve(repoRoot, pkg.publishDir);
-    console.log(`\nPublishing ${pkg.name}@${pkg.newVersion} from ${pkg.publishDir}`);
-    await runCommand('npm', ['publish', '--access', 'public'], publishCwd);
-  }
-  console.log('\nAll packages published successfully.');
 }
 
 main().catch((error) => {
