@@ -4,11 +4,10 @@ set shell := ["powershell", "-c"]
 
 # Publish: bump patch version and publish to npm
 publish:
+    npm version patch --no-git-tag-version
     node dksetup-publish.mjs
 
-# (Lockfile removed) — use `publish` which now safely checks registry before bumping/publishing
-
-# Bump only
+# Bump only (no publish)
 bump:
     npm version patch --no-git-tag-version
 
