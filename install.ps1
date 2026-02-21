@@ -1,6 +1,3 @@
-# DKsetup Bootstrap Installer for Windows
-# Run this in PowerShell: iwr https://raw.githubusercontent.com/Da3n0n/DKsetup/main/install.ps1 | iex
-
 $ErrorActionPreference = "Stop"
 
 function Write-Step($msg) {
@@ -131,6 +128,125 @@ $exePath = $null
 if ($globalBin) {
     $candidate = Join-Path $globalBin $exeName
     if (Test-Path $candidate) { $exePath = $candidate }
+}
+
+# Optional: offer to install Visual Studio Code and selected extensions
+$installVSCode = Read-Host "Would you like to install Visual Studio Code now? (Y/N) [N]"
+if ($installVSCode -match '^[Yy]') {
+    $wingetAvailable = Get-Command winget -ErrorAction SilentlyContinue
+    if ($wingetAvailable) {
+        Write-Step "Installing Visual Studio Code via winget..."
+        winget install --id Microsoft.VisualStudioCode -e --accept-source-agreements --accept-package-agreements
+        if ($LASTEXITCODE -eq 0) { Write-Success "Visual Studio Code installed" } else { Write-Err "winget install failed" }
+    } else {
+        Write-Host "    winget not found. Please install VS Code manually from https://code.visualstudio.com/" -ForegroundColor Yellow
+    }
+
+    # Try to locate the `code` CLI
+    $codeAvailable = $false
+    try {
+        $cv = code --version 2>$null
+        if ($cv) { $codeAvailable = $true; Write-Success "Detected 'code' CLI" }
+    } catch {}
+
+    if (-not $codeAvailable) {
+        # Try common location for code.exe
+        $possible = @(
+            "$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd",
+            "$env:ProgramFiles\Microsoft VS Code\bin\code.cmd",
+            "$env:ProgramFiles(x86)\Microsoft VS Code\bin\code.cmd"
+        )
+        foreach ($p in $possible) {
+            if (Test-Path $p) {
+                $env:Path += ";$(Split-Path $p)"
+                try { code --version 2>$null; $codeAvailable = $true; Write-Success "Found 'code' at $p"; break } catch {}
+            }
+        }
+    }
+
+    if ($codeAvailable) {
+        Write-Host "`nExtensions and themes: you may enter extension IDs (optionally with @version), comma-separated." -ForegroundColor Green
+        Write-Host "Examples: ms-python.python, eamodio.gitlens, gitswap@1.2.3" -ForegroundColor Yellow
+        $defaultExts = @("gitswap","lynx","ms-python.python","eamodio.gitlens")
+        Write-Host "Default extensions if you press Enter: $($defaultExts -join ', ')" -ForegroundColor Yellow
+        $extInput = Read-Host "Enter extension IDs (comma-separated) or press Enter to use defaults"
+        if ([string]::IsNullOrWhiteSpace($extInput)) {
+            $extensions = $defaultExts
+        } else {
+            $extensions = $extInput -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+        }
+
+        # Themes selection
+        Write-Host "`nTheme extensions: you may include themes in the extensions list, or enter theme extension IDs separately." -ForegroundColor Green
+        Write-Host "If you want to install themes only, enter their extension IDs now (comma-separated) or press Enter to skip." -ForegroundColor Yellow
+        $themeInput = Read-Host "Enter theme extension IDs (comma-separated) or press Enter to skip"
+        if (-not [string]::IsNullOrWhiteSpace($themeInput)) {
+            $themeExts = $themeInput -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+            $extensions += $themeExts
+        } else {
+            $themeExts = @()
+        }
+
+        # Install each requested extension
+        $installedThemes = @()
+        foreach ($ext in $extensions) {
+            Write-Step "Installing extension: $ext"
+            try {
+                # Try direct install; `code` may not accept @version for marketplace installs.
+                & code --install-extension $ext --force 2>$null
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Success "Installed $ext"
+                } else {
+                    Write-Err "'code' failed to install $ext (attempting without version)..."
+                    # If ext contains @version, try without version
+                    if ($ext -match "@") {
+                        $base = $ext.Split('@')[0]
+                        & code --install-extension $base --force 2>$null
+                        if ($LASTEXITCODE -eq 0) { Write-Success "Installed $base (versioned install not supported, installed latest)" }
+                        else { Write-Err "Failed to install $base as well" }
+                    }
+                }
+
+                # Track themes (best-effort): if the extension id contains 'theme' or is in themeExts, record it
+                if ($ext -match '(theme|Theme)' -or ($themeExts -contains $ext) -or ($ext -in $defaultExts -and $ext -match 'lynx|gitswap')) {
+                    $installedThemes += $ext
+                }
+            } catch {
+                Write-Err "Failed to install $ext: $_"
+            }
+        }
+
+        # If themes were installed, offer to set default theme
+        if ($installedThemes.Count -gt 0) {
+            Write-Host "`nInstalled themes/extensions detected: $($installedThemes -join ', ')" -ForegroundColor Green
+            if ($installedThemes.Count -eq 1) {
+                $setDefault = Read-Host "Set the installed theme as default? (Y/N) [Y]"
+                if ($setDefault -match '^[Nn]') { $chosenTheme = $null } else { $chosenTheme = Read-Host "Enter the exact theme name to set as default (example: 'Default Dark+')" }
+            } else {
+                Write-Host "You installed multiple themes. Enter the exact theme name to set as default (or press Enter to skip)." -ForegroundColor Yellow
+                $chosenTheme = Read-Host "Theme name to set as default (exact)")
+                if ([string]::IsNullOrWhiteSpace($chosenTheme)) { $chosenTheme = $null }
+            }
+
+            if ($chosenTheme) {
+                $settingsDir = Join-Path $env:APPDATA 'Code\User'
+                if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }
+                $settingsPath = Join-Path $settingsDir 'settings.json'
+
+                $settings = @{}
+                if (Test-Path $settingsPath) {
+                    try { $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json -ErrorAction Stop } catch { $settings = @{} }
+                }
+
+                $settings.'workbench.colorTheme' = $chosenTheme
+                $settingsJson = $settings | ConvertTo-Json -Depth 5
+                $settingsJson | Out-File -FilePath $settingsPath -Encoding UTF8
+                Write-Success "Set default theme to '$chosenTheme' in $settingsPath"
+            }
+        }
+    } else {
+        Write-Host "    Could not find the 'code' CLI. Open VS Code, then install extensions from the Extensions view or run 'code --install-extension <id>' once 'code' is available." -ForegroundColor Yellow
+    }
 }
 
 if ($exePath) {
