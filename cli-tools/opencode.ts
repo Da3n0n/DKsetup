@@ -18,7 +18,7 @@ export const OpencodeCliInstaller: Installer = {
 
         try {
             console.log(chalk.gray('> npm install -g opencode-cli'));
-            // execSync('npm install -g opencode-cli', { stdio: 'inherit' });
+            execSync('npm install -g opencode-cli', { stdio: 'inherit' });
             console.log(chalk.green('✔ OpenCode CLI installed successfully!'));
         } catch (error) {
             console.log(chalk.red('✖ Failed to install OpenCode CLI.'));

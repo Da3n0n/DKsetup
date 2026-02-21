@@ -21,11 +21,13 @@ export const VsCodeInstaller: Installer = {
         try {
             if (platform === 'win32') {
                 console.log(chalk.gray('> winget install Microsoft.VisualStudioCode'));
-                // execSync('winget install Microsoft.VisualStudioCode', { stdio: 'inherit' });
+                execSync('winget install Microsoft.VisualStudioCode', { stdio: 'inherit' });
             } else if (platform === 'darwin') {
                 console.log(chalk.gray('> brew install --cask visual-studio-code'));
+                execSync('brew install --cask visual-studio-code', { stdio: 'inherit' });
             } else if (platform === 'linux') {
                 console.log(chalk.gray('> sudo snap install code --classic'));
+                execSync('sudo snap install code --classic', { stdio: 'inherit' });
             }
             console.log(chalk.green('✔ VS Code installed successfully!'));
         } catch (error) {

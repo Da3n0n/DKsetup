@@ -1,3 +1,12 @@
+$param(
+    [switch]$AllUsers,
+    [switch]$Yes,
+    [switch]$InstallVSCode,
+    [string]$Extensions,
+    [string]$Themes,
+    [string]$DefaultTheme
+)
+
 $ErrorActionPreference = "Stop"
 
 function Write-Step($msg) {
@@ -219,13 +228,23 @@ if ($installVSCode -match '^[Yy]') {
         # If themes were installed, offer to set default theme
         if ($installedThemes.Count -gt 0) {
             Write-Host "`nInstalled themes/extensions detected: $($installedThemes -join ', ')" -ForegroundColor Green
-            if ($installedThemes.Count -eq 1) {
-                $setDefault = Read-Host "Set the installed theme as default? (Y/N) [Y]"
-                if ($setDefault -match '^[Nn]') { $chosenTheme = $null } else { $chosenTheme = Read-Host "Enter the exact theme name to set as default (example: 'Default Dark+')" }
+
+            if ($PSBoundParameters.ContainsKey('DefaultTheme') -and -not [string]::IsNullOrWhiteSpace($DefaultTheme)) {
+                $chosenTheme = $DefaultTheme
+                Write-Host "Setting default theme from CLI: $chosenTheme" -ForegroundColor Yellow
+            } elseif ($Yes) {
+                # Non-interactive auto-accept: pick the first installed theme as default
+                $chosenTheme = $installedThemes[0]
+                Write-Host "Auto-accept: setting the first installed theme as default: $chosenTheme" -ForegroundColor Yellow
             } else {
-                Write-Host "You installed multiple themes. Enter the exact theme name to set as default (or press Enter to skip)." -ForegroundColor Yellow
-                $chosenTheme = Read-Host "Theme name to set as default (exact)")
-                if ([string]::IsNullOrWhiteSpace($chosenTheme)) { $chosenTheme = $null }
+                if ($installedThemes.Count -eq 1) {
+                    $setDefault = Read-Host "Set the installed theme as default? (Y/N) [Y]"
+                    if ($setDefault -match '^[Nn]') { $chosenTheme = $null } else { $chosenTheme = Read-Host "Enter the exact theme name to set as default (example: 'Default Dark+')" }
+                } else {
+                    Write-Host "You installed multiple themes. Enter the exact theme name to set as default (or press Enter to skip)." -ForegroundColor Yellow
+                    $chosenTheme = Read-Host "Theme name to set as default (exact)"
+                    if ([string]::IsNullOrWhiteSpace($chosenTheme)) { $chosenTheme = $null }
+                }
             }
 
             if ($chosenTheme) {

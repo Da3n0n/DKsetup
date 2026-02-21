@@ -18,7 +18,7 @@ export const KimiCliInstaller: Installer = {
 
         try {
             console.log(chalk.gray('> npm install -g moonshot-kimi-cli'));
-            // execSync('npm install -g moonshot-kimi-cli', { stdio: 'inherit' });
+            execSync('npm install -g moonshot-kimi-cli', { stdio: 'inherit' });
             console.log(chalk.green('✔ Kimi CLI installed successfully!'));
         } catch (error) {
             console.log(chalk.red('✖ Failed to install Kimi CLI.'));

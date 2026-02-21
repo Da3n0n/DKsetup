@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { prompt } from 'enquirer';
 import chalk from 'chalk';
 import { Command } from 'commander';
@@ -21,6 +22,7 @@ import { CppInstaller } from './languages/cpp.js';
 // Editors
 import { VsCodeInstaller } from './editors/vscode/installer.js';
 import { installVsCodeExtensions } from './editors/vscode/extensions.js';
+import { installZedExtensions } from './editors/zed-extensions.js';
 import { ZedInstaller } from './editors/zed.js';
 import { AntigravityInstaller } from './editors/antigravity.js';
 import { OpencodeDesktopInstaller } from './editors/opencode-desktop.js';
@@ -124,6 +126,7 @@ async function runDashboard() {
         // Step 2: Tool Selection per Category
         const finalInstallers: Installer[] = [];
         let installVsCodeExts = false;
+        let installZedExts = false;
 
         for (const cat of selectedCategories) {
             console.log(); // Spacing
@@ -148,6 +151,17 @@ async function runDashboard() {
                     initial: true
                 } as any);
                 installVsCodeExts = exts;
+            }
+
+            // Special case for Zed extensions & settings
+            if (selectedTools.includes(ZedInstaller.name)) {
+                const { zedExts } = await prompt<{ zedExts: boolean }>({
+                    type: 'confirm',
+                    name: 'zedExts',
+                    message: `Would you like to configure ${chalk.bold('Zed Extensions & Settings')} as well?`,
+                    initial: true
+                } as any);
+                installZedExts = zedExts;
             }
 
             const matchedInstallers = tools.filter(t => selectedTools.includes(t.name));
@@ -204,6 +218,12 @@ async function runDashboard() {
         if (installVsCodeExts) {
             console.log(chalk.bold(`➜ VS Code Extensions`));
             await installVsCodeExtensions();
+            console.log();
+        }
+
+        if (installZedExts) {
+            console.log(chalk.bold(`➜ Zed Extensions & Settings`));
+            await installZedExtensions();
             console.log();
         }
 

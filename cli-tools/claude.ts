@@ -18,7 +18,7 @@ export const ClaudeCodeInstaller: Installer = {
 
         try {
             console.log(chalk.gray('> npm install -g @anthropic-ai/claude-code'));
-            // execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
+            execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
             console.log(chalk.green('✔ Claude Code CLI installed successfully!'));
         } catch (error) {
             console.log(chalk.red('✖ Failed to install Claude Code CLI.'));

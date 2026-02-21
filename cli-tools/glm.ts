@@ -18,7 +18,7 @@ export const GlmCliInstaller: Installer = {
 
         try {
             console.log(chalk.gray('> pip install chatglm-cli'));
-            // execSync('pip install chatglm-cli', { stdio: 'inherit' });
+            execSync('pip install chatglm-cli', { stdio: 'inherit' });
             console.log(chalk.green('✔ GLM CLI installed successfully!'));
         } catch (error) {
             console.log(chalk.red('✖ Failed to install GLM CLI.'));

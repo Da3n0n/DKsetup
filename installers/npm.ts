@@ -18,8 +18,7 @@ export const NpmInstaller: Installer = {
 
         try {
             console.log(chalk.gray('> npm install -g npm'));
-            // Remove the comment below to actually run the command if desired
-            // execSync('npm install -g npm', { stdio: 'inherit' });
+            execSync('npm install -g npm', { stdio: 'inherit' });
             console.log(chalk.green('✔ npm installed/updated successfully!'));
         } catch (error) {
             console.log(chalk.red('✖ Failed to install or update npm. Make sure Node.js is installed first.'));

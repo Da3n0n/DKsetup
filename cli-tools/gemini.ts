@@ -19,7 +19,7 @@ export const GeminiCliInstaller: Installer = {
 
         try {
             console.log(chalk.gray('> npm install -g @google/gemini-cli'));
-            // execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
+            execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
             console.log(chalk.green('✔ Gemini CLI installed successfully!'));
         } catch (error) {
             console.log(chalk.red('✖ Failed to install Gemini CLI.'));

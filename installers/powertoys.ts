@@ -29,7 +29,7 @@ export const PowerToysInstaller: Installer = {
 
         try {
             console.log(chalk.gray('> winget install Microsoft.PowerToys --source winget'));
-            // execSync('winget install Microsoft.PowerToys --source winget', { stdio: 'inherit' });
+            execSync('winget install Microsoft.PowerToys --source winget', { stdio: 'inherit' });
             console.log(chalk.green('✔ PowerToys installed successfully!'));
         } catch (error) {
             console.log(chalk.red('✖ Failed to install PowerToys.'));

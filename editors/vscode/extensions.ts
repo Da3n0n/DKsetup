@@ -14,7 +14,7 @@ export async function installVsCodeExtensions() {
     for (const ext of EXTENSIONS) {
         try {
             console.log(chalk.gray(`> code --install-extension ${ext} --force`));
-            // execSync(`code --install-extension ${ext} --force`, { stdio: 'inherit' });
+            execSync(`code --install-extension ${ext} --force`, { stdio: 'inherit' });
             console.log(chalk.green(`✔ ${ext} installed.`));
         } catch (error) {
             console.log(chalk.red(`✖ Failed to install extension: ${ext}`));

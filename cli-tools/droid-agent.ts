@@ -18,7 +18,7 @@ export const DroidAgentInstaller: Installer = {
 
         try {
             console.log(chalk.gray('> npm install -g droid-agent-cli'));
-            // execSync('npm install -g droid-agent-cli', { stdio: 'inherit' });
+            execSync('npm install -g droid-agent-cli', { stdio: 'inherit' });
             console.log(chalk.green('✔ Droid Agent CLI installed successfully!'));
         } catch (error) {
             console.log(chalk.red('✖ Failed to install Droid Agent CLI.'));

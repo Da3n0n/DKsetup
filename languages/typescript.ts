@@ -18,7 +18,7 @@ export const TypeScriptInstaller: Installer = {
 
         try {
             console.log(chalk.gray('> npm install -g typescript ts-node'));
-            // execSync('npm install -g typescript ts-node', { stdio: 'inherit' });
+            execSync('npm install -g typescript ts-node', { stdio: 'inherit' });
             console.log(chalk.green('✔ TypeScript installed successfully!'));
         } catch (error) {
             console.log(chalk.red('✖ Failed to install TypeScript. Ensure Node.js and npm are installed.'));

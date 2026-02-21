@@ -18,7 +18,7 @@ export const DroidFactoryInstaller: Installer = {
 
         try {
             console.log(chalk.gray('> npm install -g droid-factory-cli'));
-            // execSync('npm install -g droid-factory-cli', { stdio: 'inherit' });
+            execSync('npm install -g droid-factory-cli', { stdio: 'inherit' });
             console.log(chalk.green('✔ Droid Factory CLI installed successfully!'));
         } catch (error) {
             console.log(chalk.red('✖ Failed to install Droid Factory CLI.'));

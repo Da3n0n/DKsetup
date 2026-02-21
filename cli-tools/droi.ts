@@ -18,7 +18,7 @@ export const DroiCliInstaller: Installer = {
 
         try {
             console.log(chalk.gray('> npm install -g droi-cli'));
-            // execSync('npm install -g droi-cli', { stdio: 'inherit' });
+            execSync('npm install -g droi-cli', { stdio: 'inherit' });
             console.log(chalk.green('✔ Droi CLI installed successfully!'));
         } catch (error) {
             console.log(chalk.red('✖ Failed to install Droi CLI.'));
