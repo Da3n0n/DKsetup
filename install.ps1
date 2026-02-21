@@ -120,12 +120,54 @@ try {
     exit 1
 }
 
-Write-Host @"
+try {
+    $globalBin = npm bin -g 2>$null
+} catch {
+    $globalBin = $null
+}
 
-  ================================================
-   DKsetup is ready!
-   
-   Run 'dksetup' to start the setup dashboard.
-  ================================================
+$exeName = "dksetup.cmd"
+$exePath = $null
+if ($globalBin) {
+    $candidate = Join-Path $globalBin $exeName
+    if (Test-Path $candidate) { $exePath = $candidate }
+}
 
-"@ -ForegroundColor Green
+if ($exePath) {
+    $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+    $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+    $combinedPath = "{0};{1}" -f $userPath, $machinePath
+    $inPath = ($combinedPath -split ";" | ForEach-Object { $_.TrimEnd('\') }) -contains $globalBin.TrimEnd('\')
+
+    Write-Host "`n  ================================================" -ForegroundColor Green
+    Write-Host "   DKsetup is ready!" -ForegroundColor Green
+    Write-Host "" -ForegroundColor Green
+    if ($inPath) {
+        Write-Host "   You can now run dksetup from this terminal:" -ForegroundColor Green
+        Write-Host "     dksetup" -ForegroundColor Yellow
+    } else {
+        Write-Host "   To run immediately without restarting your terminal, execute:" -ForegroundColor Green
+        Write-Host "     & '$exePath' run" -ForegroundColor Yellow
+        Write-Host "" -ForegroundColor Green
+        Write-Host "   Or open a new terminal (to refresh PATH), then run:" -ForegroundColor Green
+        Write-Host "     dksetup" -ForegroundColor Yellow
+        Write-Host "" -ForegroundColor Green
+        Write-Host "   Or run without installing globally using npx:" -ForegroundColor Green
+        Write-Host "     npx dksetup" -ForegroundColor Yellow
+        Write-Host "" -ForegroundColor Green
+        Write-Host "   Global npm binaries are located at: $globalBin" -ForegroundColor Green
+        Write-Host "   To add that folder to your PATH permanently (optional), run:" -ForegroundColor Green
+        Write-Host "     setx PATH \"$($userPath);$globalBin\"" -ForegroundColor Yellow
+    }
+    Write-Host "  ================================================`n" -ForegroundColor Green
+} else {
+    Write-Host "`n  ================================================" -ForegroundColor Green
+    Write-Host "   DKsetup is ready!" -ForegroundColor Green
+    Write-Host "" -ForegroundColor Green
+    Write-Host "   Unable to detect global npm binaries. To run DKsetup now without restarting, run:" -ForegroundColor Green
+    Write-Host "     npx dksetup" -ForegroundColor Yellow
+    Write-Host "" -ForegroundColor Green
+    Write-Host "   Or close and re-open your terminal, then run:" -ForegroundColor Green
+    Write-Host "     dksetup" -ForegroundColor Yellow
+    Write-Host "  ================================================`n" -ForegroundColor Green
+}
